@@ -4,6 +4,7 @@ import type { DomainType, SearchItem } from '@/lib/schemas/types';
 
 const BASE_URL = process.env.LAW_API_BASE_URL?.replace(/\/+$/, '') || 'https://www.law.go.kr/DRF';
 const LAW_OC = process.env.LAW_OC;
+const USE_MOCK = process.env.LAW_API_MOCK === 'true' || !LAW_OC;
 
 type JsonRecord = Record<string, any>;
 
@@ -194,30 +195,86 @@ function mapSpecializedSearchItem(item: JsonRecord): SpecializedSearchItem {
 }
 
 export async function searchLaws(query: string, display = 20): Promise<LawSearchItem[]> {
+  if (USE_MOCK) {
+    return [
+      {
+        title: query.includes('근') ? '근로기준법' : `${query} 관련 법령`,
+        lawId: 'MOCK-LAW-0001',
+        mst: 'MOCK-MST-0001',
+        promulgationDate: '2024-01-01',
+        promulgationNumber: '제10000호',
+        revisionType: '일부개정',
+        ministry: '고용노동부',
+        lawType: '법률',
+        source: 'law' as const
+      }
+    ].slice(0, display);
+  }
   const json = await fetchJson<JsonRecord>(buildSearchUrl('law', { query, display }));
   const root = json['LawSearch'] || json['lawSearch'] || json;
   return ensureArray(root['law']).map(mapLawSearchItem).filter((x) => x.title);
 }
 
 export async function searchPrecedents(query: string, display = 20): Promise<PrecedentSearchItem[]> {
+  if (USE_MOCK) {
+    return [
+      {
+        caseName: `${query} 관련 판례`,
+        caseNumber: '2024다00001',
+        courtName: '대법원',
+        sentenceDate: '2024-05-01',
+        source: 'precedent' as const
+      }
+    ].slice(0, display);
+  }
   const json = await fetchJson<JsonRecord>(buildSearchUrl('prec', { query, display }));
   const root = json['PrecSearch'] || json['precSearch'] || json;
   return ensureArray(root['prec']).map(mapPrecedentSearchItem).filter((x) => x.caseName);
 }
 
 export async function searchRules(query: string, display = 20): Promise<RuleSearchItem[]> {
+  if (USE_MOCK) {
+    return [
+      {
+        title: `${query} 시행규칙`,
+        ruleId: 'MOCK-RULE-0001',
+        ministry: '고용노동부',
+        source: 'rule' as const
+      }
+    ].slice(0, display);
+  }
   const json = await fetchJson<JsonRecord>(buildSearchUrl('admrul', { query, display }));
   const root = json['AdmRuleSearch'] || json['AdmRulSearch'] || json;
   return ensureArray(root['admrule'] || root['admrul']).map(mapRuleSearchItem).filter((x) => x.title);
 }
 
 export async function searchLinkedOrdinances(query: string, display = 20): Promise<OrdinanceSearchItem[]> {
+  if (USE_MOCK) {
+    return [
+      {
+        title: `${query} 조례`,
+        ordinanceId: 'MOCK-ORD-0001',
+        localGov: '서울특별시',
+        source: 'ordinance' as const
+      }
+    ].slice(0, display);
+  }
   const json = await fetchJson<JsonRecord>(buildSearchUrl('lnkLs', { query, display }));
   const root = json['LnkLsSearch'] || json['lnkLsSearch'] || json;
   return ensureArray(root['law']).map(mapOrdinanceSearchItem).filter((x) => x.title);
 }
 
 export async function searchSpecialized(query: string, display = 20): Promise<SpecializedSearchItem[]> {
+  if (USE_MOCK) {
+    return [
+      {
+        title: `${query} 관련 전문결정`,
+        caseNumber: 'MOCK-SP-0001',
+        decisionDate: '2024-06-01',
+        source: 'specialized' as const
+      }
+    ].slice(0, display);
+  }
   const json = await fetchJson<JsonRecord>(buildSearchUrl('expc', { query, display }));
   const root = json['ExpcSearch'] || json['expcSearch'] || json;
   return ensureArray(root['expc']).map(mapSpecializedSearchItem).filter((x) => x.title);
@@ -234,8 +291,28 @@ export async function retrieveLawText(input: z.infer<typeof RetrieveLawTextInput
   if (!parsed.lawId && !parsed.mst) {
     throw new Error('retrieveLawText requires lawId or mst');
   }
-
   const canonicalArticle = normalizeArticle(parsed.jo);
+  if (USE_MOCK) {
+    return {
+      lawId: parsed.lawId ?? 'MOCK-LAW-0001',
+      mst: parsed.mst ?? 'MOCK-MST-0001',
+      title: '근로기준법',
+      lawType: '법률',
+      promulgationDate: '2024-01-01',
+      promulgationNumber: '제10000호',
+      article: canonicalArticle
+        ? {
+            display: canonicalArticle.display,
+            numeric: canonicalArticle.numeric,
+            title: canonicalArticle.display,
+            content: `${canonicalArticle.display} 모의 본문 내용`
+          }
+        : undefined,
+      bodyText: '모의 법령 본문 내용',
+      source: 'lawText'
+    };
+  }
+
   const json = await fetchJson<JsonRecord>(
     buildServiceUrl('law', { ID: parsed.lawId, MST: parsed.mst, JO: canonicalArticle?.numeric })
   );
@@ -270,6 +347,32 @@ export async function retrieveLawText(input: z.infer<typeof RetrieveLawTextInput
 export async function retrieveThreeTier(input: { lawId?: string; mst?: string; kind?: 1 | 2 }): Promise<ThreeTierResult> {
   if (!input.lawId && !input.mst) {
     throw new Error('retrieveThreeTier requires lawId or mst');
+  }
+  if (USE_MOCK) {
+    return {
+      lawName: '근로기준법',
+      lawId: input.lawId ?? 'MOCK-LAW-0001',
+      mst: input.mst ?? 'MOCK-MST-0001',
+      items: [
+        {
+          level: 'law',
+          title: '근로기준법',
+          articleNo: '003800',
+          articleTitle: '제38조',
+          content: '대통령령으로 정한다',
+          delegatedTo: 'decree'
+        },
+        {
+          level: 'decree',
+          title: '근로기준법 시행령',
+          articleNo: '003800',
+          articleTitle: '제38조',
+          content: '부령으로 정한다',
+          delegatedTo: 'rule'
+        }
+      ],
+      source: 'threeTier'
+    };
   }
 
   const json = await fetchJson<JsonRecord>(

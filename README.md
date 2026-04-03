@@ -30,9 +30,11 @@ Production-oriented API scaffold for Korean legal research using Next.js App Rou
 ```bash
 LAW_OC=your_api_key
 LAW_API_BASE_URL=https://www.law.go.kr/DRF
+LAW_API_MOCK=false
 ```
 
 > `LAW_OC` is only used server-side in Node.js route handlers.
+> `LAW_API_MOCK=true` enables deterministic mock responses for local/offline validation.
 
 ## Endpoints
 
