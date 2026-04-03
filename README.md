@@ -128,6 +128,17 @@ npm install
 npm run dev
 ```
 
+## Real API Smoke Test (LAW_OC required)
+
+```bash
+LAW_OC=your_real_key LAW_API_MOCK=false npm run smoke:real
+```
+
+This runs 3 endpoint checks:
+1. `GET /api/search/law?query=근로기준법`
+2. `GET /api/retrieve/law-text?lawId=...&jo=제38조` (or `mst=...`)
+3. `GET /api/chain/full-research?query=근로기준법 제38조`
+
 ## Deploy on Vercel
 
 1. Push this repository to GitHub.
