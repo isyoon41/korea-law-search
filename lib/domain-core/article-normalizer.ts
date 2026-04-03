@@ -5,7 +5,7 @@ export interface NormalizedArticle {
   sub?: number;
 }
 
-const ARTICLE_REGEX = /(?:제)?\s*(\d+)\s*조(?:\s*의\s*(\d+))?/;
+const ARTICLE_REGEX = /(?:제)?\s*(\d+)\s*조(?:\s*의\s*(\d+))?(?:\s*(?:항|호|목).*)?$/;
 
 export function normalizeArticle(rawInput: string): NormalizedArticle {
   const raw = rawInput.trim();
@@ -23,9 +23,15 @@ export function normalizeArticle(rawInput: string): NormalizedArticle {
     };
   }
 
+  const numericOnly = raw.match(/^(\d+)$/);
+  if (numericOnly) {
+    const main = Number(numericOnly[1]);
+    return { display: `제${main}조`, numeric: `${String(main).padStart(4, '0')}00`, raw };
+  }
+
   const match = raw.match(ARTICLE_REGEX);
   if (!match) {
-    const main = Number(raw) || 0;
+    const main = Number(raw.replace(/\D/g, '')) || 0;
     const numeric = `${String(main).padStart(4, '0')}00`;
     return { display: `제${main}조`, numeric, raw };
   }

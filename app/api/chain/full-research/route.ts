@@ -2,6 +2,7 @@ import { MemoryCache, TTL } from '@/lib/cache/memory';
 import { runFullResearch } from '@/lib/chain/pipelines';
 import { buildResponse } from '@/lib/utils/response';
 import { getRequiredQueryParam, readCache } from '@/lib/utils/route';
+import { hashKey } from '@/lib/utils/hash';
 
 export const runtime = 'nodejs';
 
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
   const query = queryResult.value!;
   const article = url.searchParams.get('article') ?? undefined;
 
-  const cacheKey = `chain:full-research:${query}:${article ?? ''}`;
+  const cacheKey = `chain:full-research:${hashKey({ query, article })}`;
   const cached = readCache<Awaited<ReturnType<typeof runFullResearch>>>(cacheKey);
   const data = cached.value ?? (await runFullResearch(query, article));
   if (!cached.cacheHit) MemoryCache.set(cacheKey, data, TTL.CHAIN_LONG);

@@ -4,6 +4,8 @@ export interface SearchItem {
   id: string;
   domain: DomainType;
   title: string;
+  lawId?: string;
+  mst?: string;
   summary?: string;
   article?: string;
   publishDate?: string;

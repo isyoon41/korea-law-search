@@ -44,9 +44,10 @@ LAW_API_BASE_URL=https://www.law.go.kr/DRF
 - `GET /api/search/all?query=근기법&article=제38조`
 
 ### Retrieve
-- `GET /api/retrieve/law-text?lawName=근로기준법`
-- `GET /api/retrieve/batch-articles?lawName=근로기준법&articles=제38조,제39조의2`
-- `GET /api/retrieve/compare-old-new?oldLawName=A&newLawName=B`
+- `GET /api/retrieve/law-text?lawId=210746`
+- `GET /api/retrieve/law-text?mst=192837&lawName=근로기준법` (fallback)
+- `GET /api/retrieve/batch-articles?lawId=210746&articles=제38조,제39조의2`
+- `GET /api/retrieve/compare-old-new?oldLawId=1001&newLawId=1002`
 - `GET /api/retrieve/three-tier?query=산업안전`
 
 ### Analyze
@@ -100,6 +101,24 @@ LAW_API_BASE_URL=https://www.law.go.kr/DRF
 }
 ```
 
+## Sample Requests / Expected Shape
+
+1. `GET /api/search/law?query=근기법`
+   - abbreviation engine resolves to `근로기준법`
+   - returns `results.laws[]` with `lawId` / `mst` fields populated when available.
+
+2. `GET /api/retrieve/law-text?lawId=210746`
+   - performs identifier-based retrieval (`ID`/`MST` first strategy).
+   - returns `results.articles[]`.
+
+3. `GET /api/analyze/delegation-map?lawId=210746`
+   - retrieves statute text by identifier.
+   - returns delegation graph in `normalizedQuery.delegationGraph`.
+
+4. `GET /api/chain/full-research?query=근기법&article=제38조`
+   - resolve abbreviation → search → top statute identifier capture → article retrieval.
+   - returns merged result buckets and chain metadata.
+
 ## Run Locally
 
 ```bash
@@ -113,4 +132,3 @@ npm run dev
 2. Import project in Vercel.
 3. Set env vars (`LAW_OC`, `LAW_API_BASE_URL`).
 4. Deploy.
-

@@ -2,7 +2,7 @@ import { resolveAbbreviation } from '@/lib/domain-core/abbreviations';
 import { normalizeArticle } from '@/lib/domain-core/article-normalizer';
 import { rankAndMerge } from '@/lib/domain-core/cross-analysis';
 import { parseDelegationGraph } from '@/lib/domain-core/delegation-engine';
-import { retrieveLawText, searchDomain } from '@/lib/connectors/law-api';
+import { retrieveLawArticles, retrieveLawText, searchDomain } from '@/lib/connectors/law-api';
 import type { SearchItem } from '@/lib/schemas/types';
 
 export async function runFullResearch(query: string, articleRaw?: string) {
@@ -17,7 +17,7 @@ export async function runFullResearch(query: string, articleRaw?: string) {
   ]);
 
   const topLaw = laws[0];
-  const articles = topLaw ? await retrieveLawText(topLaw.title) : [];
+  const articles = topLaw ? await retrieveLawArticles({ id: topLaw.lawId, mst: topLaw.mst }) : [];
 
   const ranked = rankAndMerge({
     query,
@@ -42,7 +42,8 @@ export async function runFullResearch(query: string, articleRaw?: string) {
 
 export async function runDelegationImpact(query: string): Promise<{ laws: SearchItem[]; delegation: unknown }> {
   const laws = await searchDomain(query, 'law');
-  const lawText = laws[0] ? await retrieveLawText(laws[0].title) : [];
+  const topLaw = laws[0];
+  const lawText = topLaw ? await retrieveLawText({ id: topLaw.lawId, mst: topLaw.mst, lawName: topLaw.title }) : [];
   const mergedText = lawText.map((a) => a.summary ?? '').join('\n');
   const delegation = parseDelegationGraph(mergedText);
   return { laws, delegation };
