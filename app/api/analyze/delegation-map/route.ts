@@ -8,11 +8,10 @@ export const runtime = 'nodejs';
 export async function GET(req: Request) {
   const startedAt = Date.now();
   const url = new URL(req.url);
-  const lawName = url.searchParams.get('lawName') ?? undefined;
   const lawId = url.searchParams.get('lawId') ?? undefined;
   const mst = url.searchParams.get('mst') ?? undefined;
-  if (!lawId && !mst && !lawName) {
-    return errorResponse('MISSING_IDENTIFIER', 'One of lawId, mst, or lawName is required');
+  if (!lawId && !mst) {
+    return errorResponse('MISSING_IDENTIFIER', 'One of lawId or mst is required');
   }
 
   const articleResult = await retrieveLawText({ lawId, mst });
@@ -20,7 +19,7 @@ export async function GET(req: Request) {
   const graph = parseDelegationGraph(text);
 
   return buildResponse({
-    query: lawName ?? lawId ?? mst ?? '',
+    query: lawId ?? mst ?? '',
     normalizedQuery: { delegationGraph: graph },
     articles: text
       ? [

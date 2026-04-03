@@ -42,6 +42,13 @@ export type OrdinanceSearchItem = {
   source: 'ordinance';
 };
 
+export type SpecializedSearchItem = {
+  title: string;
+  caseNumber?: string;
+  decisionDate?: string;
+  source: 'specialized';
+};
+
 export type LawTextResult = {
   lawId?: string;
   mst?: string;
@@ -177,6 +184,15 @@ function mapOrdinanceSearchItem(item: JsonRecord): OrdinanceSearchItem {
   };
 }
 
+function mapSpecializedSearchItem(item: JsonRecord): SpecializedSearchItem {
+  return {
+    title: pickFirstDefined(item['재결례명'], item['결정례명'], item['사건명'], item['제목']) || '',
+    caseNumber: toText(pickFirstDefined(item['사건번호'], item['재결번호'], item['결정번호'])),
+    decisionDate: toText(pickFirstDefined(item['재결일자'], item['결정일자'], item['선고일자'])),
+    source: 'specialized'
+  };
+}
+
 export async function searchLaws(query: string, display = 20): Promise<LawSearchItem[]> {
   const json = await fetchJson<JsonRecord>(buildSearchUrl('law', { query, display }));
   const root = json['LawSearch'] || json['lawSearch'] || json;
@@ -199,6 +215,12 @@ export async function searchLinkedOrdinances(query: string, display = 20): Promi
   const json = await fetchJson<JsonRecord>(buildSearchUrl('lnkLs', { query, display }));
   const root = json['LnkLsSearch'] || json['lnkLsSearch'] || json;
   return ensureArray(root['law']).map(mapOrdinanceSearchItem).filter((x) => x.title);
+}
+
+export async function searchSpecialized(query: string, display = 20): Promise<SpecializedSearchItem[]> {
+  const json = await fetchJson<JsonRecord>(buildSearchUrl('expc', { query, display }));
+  const root = json['ExpcSearch'] || json['expcSearch'] || json;
+  return ensureArray(root['expc']).map(mapSpecializedSearchItem).filter((x) => x.title);
 }
 
 const RetrieveLawTextInputSchema = z.object({
@@ -334,6 +356,16 @@ export async function searchDomain(query: string, domain: DomainType): Promise<S
       id: x.ordinanceId ?? x.title,
       domain: 'ordinance',
       title: x.title,
+      source: 'law.go.kr',
+      raw: x
+    }));
+  }
+  if (domain === 'specialized') {
+    return (await searchSpecialized(query)).map((x) => ({
+      id: x.caseNumber ?? x.title,
+      domain: 'specialized',
+      title: x.title,
+      publishDate: x.decisionDate,
       source: 'law.go.kr',
       raw: x
     }));

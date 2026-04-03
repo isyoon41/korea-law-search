@@ -9,16 +9,14 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const oldLaw = {
     id: url.searchParams.get('oldLawId') ?? undefined,
-    mst: url.searchParams.get('oldMst') ?? undefined,
-    lawName: url.searchParams.get('oldLawName') ?? undefined
+    mst: url.searchParams.get('oldMst') ?? undefined
   };
   const newLaw = {
     id: url.searchParams.get('newLawId') ?? undefined,
-    mst: url.searchParams.get('newMst') ?? undefined,
-    lawName: url.searchParams.get('newLawName') ?? undefined
+    mst: url.searchParams.get('newMst') ?? undefined
   };
-  if ((!oldLaw.id && !oldLaw.mst && !oldLaw.lawName) || (!newLaw.id && !newLaw.mst && !newLaw.lawName)) {
-    return errorResponse('MISSING_IDENTIFIER', 'Both old and new laws require one of id, mst, or lawName');
+  if ((!oldLaw.id && !oldLaw.mst) || (!newLaw.id && !newLaw.mst)) {
+    return errorResponse('MISSING_IDENTIFIER', 'Both old and new laws require one of id or mst');
   }
 
   const [oldResult, newResult] = await Promise.all([
@@ -27,7 +25,7 @@ export async function GET(req: Request) {
   ]);
 
   return buildResponse({
-    query: `${oldLaw.lawName ?? oldLaw.id ?? oldLaw.mst} vs ${newLaw.lawName ?? newLaw.id ?? newLaw.mst}`,
+    query: `${oldLaw.id ?? oldLaw.mst} vs ${newLaw.id ?? newLaw.mst}`,
     normalizedQuery: { oldCount: oldResult.bodyText ? 1 : 0, newCount: newResult.bodyText ? 1 : 0 },
     articles: [
       {

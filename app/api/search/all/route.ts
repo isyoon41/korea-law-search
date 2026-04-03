@@ -18,18 +18,19 @@ export async function GET(req: Request) {
   const resolved = resolveAbbreviation(query);
   const normalizedArticle = articleRaw ? normalizeArticle(articleRaw) : undefined;
 
-  const [laws, precedents, rules, ordinances] = await Promise.all([
+  const [laws, precedents, rules, ordinances, specialized] = await Promise.all([
     searchDomain(resolved.resolved, 'law'),
     searchDomain(resolved.resolved, 'precedent'),
     searchDomain(resolved.resolved, 'rule'),
-    searchDomain(resolved.resolved, 'ordinance')
+    searchDomain(resolved.resolved, 'ordinance'),
+    searchDomain(resolved.resolved, 'specialized')
   ]);
 
   const ranked = rankAndMerge({
     query,
     abbreviationResolved: resolved.resolved,
     article: normalizedArticle?.display,
-    buckets: [laws, precedents, rules, ordinances]
+    buckets: [laws, precedents, rules, ordinances, specialized]
   });
 
   return buildResponse({
@@ -37,7 +38,8 @@ export async function GET(req: Request) {
     normalizedQuery: {
       abbreviation: resolved,
       ...(normalizedArticle ? { article: normalizedArticle } : {}),
-      rankedCount: ranked.length
+      rankedCount: ranked.length,
+      specializedCount: specialized.length
     },
     laws,
     precedents,

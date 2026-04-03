@@ -8,6 +8,7 @@ import {
   type LawSearchItem
 } from '@/lib/connectors/law-api';
 import { normalizeArticle } from '@/lib/domain-core/article-normalizer';
+import { resolveAbbreviation } from '@/lib/domain-core/abbreviations';
 
 export type FullResearchInput = {
   query: string;
@@ -18,6 +19,12 @@ export type FullResearchResult = {
   query: string;
   normalizedQuery: {
     original: string;
+    abbreviation?: {
+      input: string;
+      resolved: string;
+      matchedBy: 'exact' | 'fuzzy' | 'none';
+      confidence: number;
+    };
     inferredLawName?: string;
     article?: {
       display: string;
@@ -85,15 +92,16 @@ export async function runFullResearch(input: FullResearchInput): Promise<FullRes
 
   const original = input.query.trim();
   const { articleInput, cleanedQuery } = extractArticleFromQuery(original);
+  const resolved = resolveAbbreviation(cleanedQuery || original);
   const article = normalizeArticle(articleInput);
 
-  const laws = await searchLaws(cleanedQuery || original, 10);
+  const laws = await searchLaws(resolved.resolved, 10);
   const topLaw = laws[0];
 
   const [precedents, rules, ordinances] = await Promise.all([
-    searchPrecedents(cleanedQuery || original, 10),
-    searchRules(cleanedQuery || original, 10),
-    searchLinkedOrdinances(cleanedQuery || original, 10)
+    searchPrecedents(resolved.resolved, 10),
+    searchRules(resolved.resolved, 10),
+    searchLinkedOrdinances(resolved.resolved, 10)
   ]);
 
   let lawText: Awaited<ReturnType<typeof retrieveLawText>> | null = null;
@@ -118,6 +126,7 @@ export async function runFullResearch(input: FullResearchInput): Promise<FullRes
     query: input.query,
     normalizedQuery: {
       original,
+      abbreviation: resolved,
       inferredLawName: topLaw?.title,
       article: article
         ? {

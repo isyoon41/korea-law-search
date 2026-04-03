@@ -8,11 +8,10 @@ export const runtime = 'nodejs';
 export async function GET(req: Request) {
   const startedAt = Date.now();
   const url = new URL(req.url);
-  const lawName = url.searchParams.get('lawName') ?? undefined;
   const lawId = url.searchParams.get('lawId') ?? undefined;
   const mst = url.searchParams.get('mst') ?? undefined;
-  if (!lawId && !mst && !lawName) {
-    return errorResponse('MISSING_IDENTIFIER', 'One of lawId, mst, or lawName is required');
+  if (!lawId && !mst) {
+    return errorResponse('MISSING_IDENTIFIER', 'One of lawId or mst is required');
   }
   const numbers = (url.searchParams.get('articles') ?? '').split(',').map((v) => v.trim()).filter(Boolean);
   const normalized = numbers.map(normalizeArticle).filter((n): n is NonNullable<typeof n> => Boolean(n));
@@ -21,7 +20,7 @@ export async function GET(req: Request) {
     normalized.map(async (item) => {
       const data = await retrieveLawText({ lawId, mst, jo: item.display });
       return {
-        id: `${data.lawId ?? data.mst ?? lawName}:${item.numeric}`,
+        id: `${data.lawId ?? data.mst ?? 'law'}:${item.numeric}`,
         domain: 'law' as const,
         title: data.title,
         article: item.display,
@@ -32,7 +31,7 @@ export async function GET(req: Request) {
   );
 
   return buildResponse({
-    query: lawName ?? lawId ?? mst ?? '',
+    query: lawId ?? mst ?? '',
     normalizedQuery: { articles: normalized },
     articles: matched,
     durationMs: Date.now() - startedAt,
