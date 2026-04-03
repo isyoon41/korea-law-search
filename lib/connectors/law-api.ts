@@ -4,7 +4,21 @@ import type { DomainType, SearchItem } from '@/lib/schemas/types';
 
 const BASE_URL = process.env.LAW_API_BASE_URL?.replace(/\/+$/, '') || 'https://www.law.go.kr/DRF';
 const LAW_OC = process.env.LAW_OC;
-const USE_MOCK = process.env.LAW_API_MOCK === 'true' || !LAW_OC;
+const IS_PRODUCTION = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+const MOCK_ENABLED = process.env.LAW_API_MOCK === 'true';
+const USE_MOCK = MOCK_ENABLED || (!LAW_OC && !IS_PRODUCTION);
+
+if (IS_PRODUCTION && !MOCK_ENABLED && !LAW_OC) {
+  throw new Error('LAW_OC is required in production');
+}
+
+export function getLawApiEnvStatus() {
+  return {
+    mock: USE_MOCK,
+    lawApiConfigured: Boolean(LAW_OC),
+    isProduction: IS_PRODUCTION
+  };
+}
 
 type JsonRecord = Record<string, any>;
 

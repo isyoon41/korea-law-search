@@ -145,5 +145,23 @@ Latest recorded real-API run: `docs/real-api-smoke-report.md`.
 
 1. Push this repository to GitHub.
 2. Import project in Vercel.
-3. Set env vars (`LAW_OC`, `LAW_API_BASE_URL`).
+3. Set env vars:
+   - `LAW_OC=...` (required in production)
+   - `LAW_API_MOCK=false` (recommended production default)
+   - `LAW_API_BASE_URL=https://www.law.go.kr/DRF`
 4. Deploy.
+
+### Production Deployment
+
+- All routes run on Node.js runtime (`export const runtime = 'nodejs'`).
+- If `LAW_API_MOCK !== true` and `LAW_OC` is missing in production, startup throws:
+  - `"LAW_OC is required in production"`
+- Health check endpoint:
+  - `GET /api/health`
+  - returns `status` and environment readiness (`mock`, `lawApiConfigured`).
+
+### Smoke Test
+
+```bash
+bash scripts/smoke-prod.sh https://your-domain.vercel.app
+```
