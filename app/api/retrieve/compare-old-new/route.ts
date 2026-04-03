@@ -21,12 +21,30 @@ export async function GET(req: Request) {
     return errorResponse('MISSING_IDENTIFIER', 'Both old and new laws require one of id, mst, or lawName');
   }
 
-  const [oldArticles, newArticles] = await Promise.all([retrieveLawText(oldLaw), retrieveLawText(newLaw)]);
+  const [oldResult, newResult] = await Promise.all([
+    retrieveLawText({ lawId: oldLaw.id, mst: oldLaw.mst }),
+    retrieveLawText({ lawId: newLaw.id, mst: newLaw.mst })
+  ]);
 
   return buildResponse({
     query: `${oldLaw.lawName ?? oldLaw.id ?? oldLaw.mst} vs ${newLaw.lawName ?? newLaw.id ?? newLaw.mst}`,
-    normalizedQuery: { oldCount: oldArticles.length, newCount: newArticles.length },
-    articles: [...oldArticles, ...newArticles],
+    normalizedQuery: { oldCount: oldResult.bodyText ? 1 : 0, newCount: newResult.bodyText ? 1 : 0 },
+    articles: [
+      {
+        id: `${oldResult.lawId ?? oldResult.mst ?? 'old'}:body`,
+        domain: 'law',
+        title: oldResult.title,
+        summary: oldResult.bodyText,
+        source: 'law.go.kr'
+      },
+      {
+        id: `${newResult.lawId ?? newResult.mst ?? 'new'}:body`,
+        domain: 'law',
+        title: newResult.title,
+        summary: newResult.bodyText,
+        source: 'law.go.kr'
+      }
+    ],
     durationMs: Date.now() - startedAt,
     sources: ['law.go.kr']
   });

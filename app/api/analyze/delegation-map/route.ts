@@ -15,13 +15,24 @@ export async function GET(req: Request) {
     return errorResponse('MISSING_IDENTIFIER', 'One of lawId, mst, or lawName is required');
   }
 
-  const articles = await retrieveLawText({ id: lawId, mst, lawName });
-  const graph = parseDelegationGraph(articles.map((a) => a.summary ?? '').join('\n'));
+  const articleResult = await retrieveLawText({ lawId, mst });
+  const text = articleResult.article?.content ?? articleResult.bodyText ?? '';
+  const graph = parseDelegationGraph(text);
 
   return buildResponse({
     query: lawName ?? lawId ?? mst ?? '',
     normalizedQuery: { delegationGraph: graph },
-    articles,
+    articles: text
+      ? [
+          {
+            id: `${articleResult.lawId ?? articleResult.mst ?? 'law'}:${articleResult.article?.numeric ?? 'body'}`,
+            domain: 'law',
+            title: articleResult.title,
+            summary: text,
+            source: 'law.go.kr'
+          }
+        ]
+      : [],
     durationMs: Date.now() - startedAt,
     sources: ['law.go.kr']
   });

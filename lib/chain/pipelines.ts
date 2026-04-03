@@ -43,8 +43,8 @@ export async function runFullResearch(query: string, articleRaw?: string) {
 export async function runDelegationImpact(query: string): Promise<{ laws: SearchItem[]; delegation: unknown }> {
   const laws = await searchDomain(query, 'law');
   const topLaw = laws[0];
-  const lawText = topLaw ? await retrieveLawText({ id: topLaw.lawId, mst: topLaw.mst, lawName: topLaw.title }) : [];
-  const mergedText = lawText.map((a) => a.summary ?? '').join('\n');
+  const lawText = topLaw ? await retrieveLawText({ lawId: topLaw.lawId, mst: topLaw.mst }) : null;
+  const mergedText = lawText ? (lawText.article?.content ?? lawText.bodyText ?? '') : '';
   const delegation = parseDelegationGraph(mergedText);
   return { laws, delegation };
 }

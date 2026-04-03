@@ -15,13 +15,21 @@ export async function GET(req: Request) {
     return errorResponse('MISSING_IDENTIFIER', 'One of lawId, mst, or lawName is required');
   }
   const numbers = (url.searchParams.get('articles') ?? '').split(',').map((v) => v.trim()).filter(Boolean);
-  const normalized = numbers.map(normalizeArticle);
+  const normalized = numbers.map(normalizeArticle).filter((n): n is NonNullable<typeof n> => Boolean(n));
 
-  const all = await retrieveLawText({ id: lawId, mst, lawName });
-  const matched = all.filter((item) => {
-    const itemNumeric = item.article ? normalizeArticle(String(item.article)).numeric : '';
-    return normalized.some((n) => n.numeric === itemNumeric);
-  });
+  const matched = await Promise.all(
+    normalized.map(async (item) => {
+      const data = await retrieveLawText({ lawId, mst, jo: item.display });
+      return {
+        id: `${data.lawId ?? data.mst ?? lawName}:${item.numeric}`,
+        domain: 'law' as const,
+        title: data.title,
+        article: item.display,
+        summary: data.article?.content ?? data.bodyText,
+        source: 'law.go.kr'
+      };
+    })
+  );
 
   return buildResponse({
     query: lawName ?? lawId ?? mst ?? '',

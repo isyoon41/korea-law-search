@@ -1,49 +1,53 @@
-export interface NormalizedArticle {
+export type CanonicalArticle = {
+  raw: string;
   display: string;
   numeric: string;
-  raw: string;
-  sub?: number;
-}
+  articleNo: number;
+  subArticleNo?: number;
+};
 
-const ARTICLE_REGEX = /(?:제)?\s*(\d+)\s*조(?:\s*의\s*(\d+))?(?:\s*(?:항|호|목).*)?$/;
+const ARTICLE_REGEX = /^제?\s*(\d+)\s*조(?:\s*의\s*(\d+))?\s*$/u;
 
-export function normalizeArticle(rawInput: string): NormalizedArticle {
-  const raw = rawInput.trim();
+export function normalizeArticle(input?: string | number | null): CanonicalArticle | null {
+  if (input === undefined || input === null) return null;
 
-  const pureNumeric = raw.match(/^(\d{4})(\d{2})$/);
-  if (pureNumeric) {
-    const main = String(Number(pureNumeric[1]));
-    const sub = Number(pureNumeric[2]);
-    const hasSub = sub > 0;
+  const raw = String(input).trim();
+  if (!raw) return null;
+
+  if (/^\d{6}$/.test(raw)) {
+    const articleNo = Number(raw.slice(0, 4));
+    const subArticleNo = Number(raw.slice(4, 6)) || undefined;
     return {
-      display: hasSub ? `제${main}조의${sub}` : `제${main}조`,
-      numeric: `${pureNumeric[1]}${pureNumeric[2]}`,
       raw,
-      ...(hasSub ? { sub } : {})
+      display: subArticleNo ? `제${articleNo}조의${subArticleNo}` : `제${articleNo}조`,
+      numeric: raw,
+      articleNo,
+      subArticleNo
     };
   }
 
-  const numericOnly = raw.match(/^(\d+)$/);
-  if (numericOnly) {
-    const main = Number(numericOnly[1]);
-    return { display: `제${main}조`, numeric: `${String(main).padStart(4, '0')}00`, raw };
+  if (/^\d+$/.test(raw)) {
+    const articleNo = Number(raw);
+    return {
+      raw,
+      display: `제${articleNo}조`,
+      numeric: `${String(articleNo).padStart(4, '0')}00`,
+      articleNo
+    };
   }
 
-  const match = raw.match(ARTICLE_REGEX);
-  if (!match) {
-    const main = Number(raw.replace(/\D/g, '')) || 0;
-    const numeric = `${String(main).padStart(4, '0')}00`;
-    return { display: `제${main}조`, numeric, raw };
-  }
+  const normalized = raw.replace(/\s+/g, '');
+  const match = normalized.match(ARTICLE_REGEX);
+  if (!match) return null;
 
-  const main = Number(match[1]);
-  const sub = match[2] ? Number(match[2]) : undefined;
-  const numeric = `${String(main).padStart(4, '0')}${String(sub ?? 0).padStart(2, '0')}`;
+  const articleNo = Number(match[1]);
+  const subArticleNo = match[2] ? Number(match[2]) : undefined;
 
   return {
-    display: sub ? `제${main}조의${sub}` : `제${main}조`,
-    numeric,
     raw,
-    ...(sub ? { sub } : {})
+    display: subArticleNo ? `제${articleNo}조의${subArticleNo}` : `제${articleNo}조`,
+    numeric: `${String(articleNo).padStart(4, '0')}${String(subArticleNo ?? 0).padStart(2, '0')}`,
+    articleNo,
+    subArticleNo
   };
 }

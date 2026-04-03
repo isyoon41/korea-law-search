@@ -1,34 +1,38 @@
-import { MemoryCache, TTL } from '@/lib/cache/memory';
-import { runFullResearch } from '@/lib/chain/pipelines';
-import { buildResponse } from '@/lib/utils/response';
-import { getRequiredQueryParam, readCache } from '@/lib/utils/route';
-import { hashKey } from '@/lib/utils/hash';
+import { NextRequest, NextResponse } from 'next/server';
+import { runFullResearch } from '@/lib/chain/full-research';
 
 export const runtime = 'nodejs';
 
-export async function GET(req: Request) {
-  const startedAt = Date.now();
-  const url = new URL(req.url);
-  const queryResult = getRequiredQueryParam(url, 'query');
-  if ('error' in queryResult) return queryResult.error;
-  const query = queryResult.value!;
-  const article = url.searchParams.get('article') ?? undefined;
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const query = searchParams.get('query')?.trim();
 
-  const cacheKey = `chain:full-research:${hashKey({ query, article })}`;
-  const cached = readCache<Awaited<ReturnType<typeof runFullResearch>>>(cacheKey);
-  const data = cached.value ?? (await runFullResearch(query, article));
-  if (!cached.cacheHit) MemoryCache.set(cacheKey, data, TTL.CHAIN_LONG);
+    if (!query) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'BAD_REQUEST',
+            message: 'query is required'
+          }
+        },
+        { status: 400 }
+      );
+    }
 
-  return buildResponse({
-    query,
-    normalizedQuery: data.normalizedQuery,
-    laws: data.laws,
-    articles: data.articles,
-    precedents: data.precedents,
-    rules: data.rules,
-    ordinances: data.ordinances,
-    durationMs: Date.now() - startedAt,
-    cacheHit: cached.cacheHit,
-    sources: ['law.go.kr']
-  });
+    const result = await runFullResearch({ query });
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        }
+      },
+      { status: 500 }
+    );
+  }
 }
