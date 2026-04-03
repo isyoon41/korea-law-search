@@ -139,6 +139,8 @@ This runs 3 endpoint checks:
 2. `GET /api/retrieve/law-text?lawId=...&jo=제38조` (or `mst=...`)
 3. `GET /api/chain/full-research?query=근로기준법 제38조`
 
+Latest recorded real-API run: `docs/real-api-smoke-report.md`.
+
 ## Deploy on Vercel
 
 1. Push this repository to GitHub.
