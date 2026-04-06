@@ -331,20 +331,63 @@ export async function retrieveLawText(input: z.infer<typeof RetrieveLawTextInput
     buildServiceUrl('law', { ID: parsed.lawId, MST: parsed.mst, JO: canonicalArticle?.numeric })
   );
 
-  const root = json['법령'] || json['LawService'] || json;
-  const articles = ensureArray(root['조문'] || root['JO'] || root['조문단위']);
-  const firstArticle = articles[0] || {};
+  const root = (json['법령'] || json['LawService'] || json) as JsonRecord;
+  const baseInfo = (root['기본정보'] as JsonRecord) || {};
+  const 조문Container = (root['조문'] as JsonRecord) || {};
+  const articles = ensureArray<JsonRecord>(
+    조문Container['조문단위'] ?? 조문Container['조문'] ?? root['JO'] ?? root['조문단위']
+  );
+
+  // Find target article by JO number if specified
+  let targetArticle: JsonRecord | undefined;
+  if (canonicalArticle?.numeric) {
+    const joNum = String(parseInt(canonicalArticle.numeric, 10));
+    targetArticle = articles.find(
+      (a: JsonRecord) =>
+        String(a['조문번호']) === joNum ||
+        String(a['조문번호']) === canonicalArticle!.numeric
+    );
+  }
+  const firstArticle = (targetArticle ?? articles[0] ?? {}) as JsonRecord;
 
   const articleTitle = pickFirstDefined(firstArticle['조문제목'], firstArticle['조제목'], firstArticle['제목']);
   const articleContent = pickFirstDefined(firstArticle['조문내용'], firstArticle['조내용'], firstArticle['내용']);
 
+  // Build bodyText: specific article content if JO requested, else all articles joined
+  const bodyText = canonicalArticle
+    ? toText(articleContent)
+    : articles
+        .map((a: JsonRecord) => toText(a['조문내용']))
+        .filter(Boolean)
+        .join('
+');
+
+  // 법종구분 can be an object like { content: '법률', 법종구분코드: 'A0002' }
+  const rawLawType =
+    baseInfo['법종구분'] ??
+    baseInfo['법종구분명'] ??
+    baseInfo['법령구분명'] ??
+    root['법종구분명'] ??
+    root['법령구분명'];
+  const lawTypeStr =
+    rawLawType !== null && typeof rawLawType === 'object'
+      ? toText((rawLawType as JsonRecord)['content'])
+      : toText(rawLawType);
+
   return {
-    lawId: toText(pickFirstDefined(root['법령ID'], parsed.lawId)),
-    mst: toText(pickFirstDefined(root['법령일련번호'], parsed.mst)),
-    title: pickFirstDefined(root['법령명한글'], root['법령명_한글'], root['법령명']) || '',
-    lawType: toText(pickFirstDefined(root['법종구분명'], root['법령구분명'])),
-    promulgationDate: toText(root['공포일자']),
-    promulgationNumber: toText(root['공포번호']),
+    lawId: toText(pickFirstDefined(baseInfo['법령ID'], root['법령ID'], parsed.lawId)),
+    mst: toText(pickFirstDefined(baseInfo['법령일련번호'], root['법령일련번호'], parsed.mst)),
+    title:
+      pickFirstDefined(
+        baseInfo['법령명_한글'],
+        baseInfo['법령명한글'],
+        root['법령명한글'],
+        root['법령명_한글'],
+        root['법령명']
+      ) || '',
+    lawType: lawTypeStr,
+    promulgationDate: toText(pickFirstDefined(baseInfo['공포일자'], root['공포일자'])),
+    promulgationNumber: toText(pickFirstDefined(baseInfo['공포번호'], root['공포번호'])),
     article: canonicalArticle
       ? {
           display: canonicalArticle.display,
@@ -353,7 +396,7 @@ export async function retrieveLawText(input: z.infer<typeof RetrieveLawTextInput
           content: toText(articleContent)
         }
       : undefined,
-    bodyText: toText(pickFirstDefined(root['본문'], root['법령내용'], articleContent)),
+    bodyText: bodyText || undefined,
     source: 'lawText'
   };
 }
