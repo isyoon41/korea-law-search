@@ -359,8 +359,7 @@ export async function retrieveLawText(input: z.infer<typeof RetrieveLawTextInput
     : articles
         .map((a: JsonRecord) => toText(a['조문내용']))
         .filter(Boolean)
-        .join('
-');
+        .join('\n');
 
   // 법종구분 can be an object like { content: '법률', 법종구분코드: 'A0002' }
   const rawLawType =
