@@ -1,0 +1,26 @@
+{
+  "name": "korea-law-search",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "smoke:real": "bash scripts/smoke-real-api.sh",
+    "smoke:prod": "bash scripts/smoke-prod.sh"
+  },
+  "dependencies": {
+    "fast-xml-parser": "4.5.0",
+    "next": "14.2.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "20.14.12",
+    "@types/react": "18.2.79",
+    "typescript": "5.5.4"
+  }
+}
